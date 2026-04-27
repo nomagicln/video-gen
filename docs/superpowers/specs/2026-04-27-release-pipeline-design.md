@@ -26,10 +26,11 @@ status: approved
 |---|---|---|---|
 | darwin-arm64 | `macos-14` | `tar.gz` | (none) |
 | linux-x64 | `ubuntu-22.04` | `tar.gz` | (none) |
-| linux-arm64 | `ubuntu-24.04-arm` | `tar.gz` | (none) |
 | windows-x64 | `windows-latest` | `zip` | `.exe` |
 
-跟 voice-gen `release.yml` 完全一致。`darwin-x64` 不做（用户决策，2026 年 Apple Silicon 已经普及）。
+`darwin-x64` 不做（用户决策，2026 年 Apple Silicon 已经普及）。
+
+`linux-arm64` 不做：dry-run 验证时发现 [`ffprobe-static`](https://github.com/joshwnj/ffprobe-static) **不为 linux-arm64 提供二进制**（仅 macOS x64、Linux x86/x64、Windows 32/64）。要支持 arm64 Linux 必须换 ffmpeg/ffprobe 来源（如 `BtbN/FFmpeg-Builds`），与 §4 的 npm 路径冲突；推迟到 v0.2 或更晚再处理。
 
 ## 3. 触发器
 
@@ -81,7 +82,6 @@ archive 命名（无版本号）：
 
 - `video-gen-darwin-arm64.tar.gz` + `.sha256`
 - `video-gen-linux-x64.tar.gz` + `.sha256`
-- `video-gen-linux-arm64.tar.gz` + `.sha256`
 - `video-gen-windows-x64.zip` + `.sha256`
 
 SHA256 文件内容遵循 `shasum -a 256` / `Get-FileHash` 单行格式：`<hash>  <archive-name>`。
@@ -184,6 +184,7 @@ xattr -d com.apple.quarantine ./video-gen ./ffmpeg ./ffprobe
 - **macOS code signing / notarization**：要 Apple Developer 账号 + secrets + 改 workflow，工作量翻倍。未做的代价是用户首次运行被 Gatekeeper 拦，README 给解决方法即可。
 - **Windows code signing**：同上，不做。
 - **darwin-x64**：Apple Silicon 时代不再支持 Intel Mac。要支持只需 matrix 加一行（`macos-13` runner）。
+- **linux-arm64**：`ffprobe-static` 上游缺 arm64 二进制（见 §2）。补这条的方式是改 ffmpeg/ffprobe 来源（`BtbN/FFmpeg-Builds` 等），等真有用户提需求再做。
 - **changelog 自动化（git-cliff / conventional-changelog）**：让 `generate_release_notes: true` 先撑着，commit message 已经在按 conventional commits 写。
 - **npm / Homebrew / Scoop 分发**：等用户基数成形再说。
 - **dev / beta / rc 通道**：暂时不需要。需要时给 tag 加后缀（`v0.2.0-rc.1`）+ `prerelease: true` 即可。
