@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import fs from 'node:fs';
 import path from 'node:path';
 import { build } from '../pipeline/build.js';
 import { createLogger, type LogMode } from '../log.js';
@@ -33,6 +34,20 @@ function parseInteger(label: string, value: string, min: number, max: number): n
   return n;
 }
 
+export function resolveOutputPath(rawOutput: string | undefined, inputDir: string): string {
+  const fallback = path.join('output', `${path.basename(inputDir)}.mp4`);
+  const resolved = path.resolve(rawOutput ?? fallback);
+  let isDir = false;
+  try {
+    isDir = fs.statSync(resolved).isDirectory();
+  } catch {
+    isDir =
+      rawOutput !== undefined &&
+      (/[\\/]$/.test(rawOutput) || path.extname(resolved) === '');
+  }
+  return isDir ? path.join(resolved, 'output.mp4') : resolved;
+}
+
 export function buildHeadlessProgram(): Command {
   const program = new Command('video-gen').description('image+audio → mp4 video composer');
 
@@ -57,9 +72,7 @@ export function buildHeadlessProgram(): Command {
 
       try {
         const inputDir = path.resolve(opts.inputDir);
-        const outputPath = path.resolve(
-          opts.output ?? path.join('output', `${path.basename(inputDir)}.mp4`),
-        );
+        const outputPath = resolveOutputPath(opts.output, inputDir);
         await build({
           inputDir,
           outputPath,
