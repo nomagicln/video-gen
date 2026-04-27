@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
-import { resolveBinary } from './resolve.js';
+import { resolveBinary, type Tool } from './resolve.js';
+import { UserError } from '../errors.js';
 
 export function parseAudioDurationMs(jsonText: string): number {
   const data = JSON.parse(jsonText) as { streams?: Array<{ duration?: string }> };
@@ -58,16 +59,16 @@ export async function probeImageSize(file: string): Promise<{ width: number; hei
   return parseImageSize(json);
 }
 
-export async function checkBinary(tool: 'ffmpeg' | 'ffprobe'): Promise<void> {
+export async function checkBinary(tool: Tool): Promise<void> {
   return new Promise((resolve, reject) => {
     const bin = resolveBinary(tool);
     const proc = spawn(bin, ['-version'], { stdio: ['ignore', 'ignore', 'pipe'] });
     let stderrBuf = '';
     proc.stderr.on('data', (d) => { stderrBuf += d.toString(); });
-    proc.on('error', () => reject(new Error(`${tool} not found at "${bin}". Install ffmpeg or set VIDEO_GEN_${tool.toUpperCase()}.`)));
+    proc.on('error', () => reject(new UserError(`${tool} not found at "${bin}". Install ffmpeg or set VIDEO_GEN_${tool.toUpperCase()}.`)));
     proc.on('close', (code) => {
       if (code === 0) resolve();
-      else reject(new Error(`${tool} -version failed (exit ${code}): ${stderrBuf.slice(-200)}`));
+      else reject(new UserError(`${tool} -version failed (exit ${code}): ${stderrBuf.slice(-200)}`));
     });
   });
 }

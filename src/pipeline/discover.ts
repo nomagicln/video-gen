@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { UserError } from '../errors.js';
 
 const IMAGE_EXT = new Set(['.jpg', '.jpeg', '.png', '.webp']);
 const AUDIO_EXT = new Set(['.mp3', '.wav', '.m4a', '.flac']);
@@ -22,7 +23,7 @@ function listDirSafe(dir: string): string[] {
 
 export function discover(rootDir: string): DiscoverResult {
   if (!fs.existsSync(rootDir)) {
-    throw new Error(`input dir does not exist: ${rootDir}`);
+    throw new UserError(`input dir does not exist: ${rootDir}`);
   }
 
   const candidates = [
@@ -57,14 +58,14 @@ export function discover(rootDir: string): DiscoverResult {
 
   for (const [base, arr] of images) {
     if (arr.length > 1) {
-      throw new Error(
+      throw new UserError(
         `ambiguous basename: ${base}\n  matched ${arr.length} images: ${arr.join(', ')}\n  v0.1 only supports 1:1 pairing — 请合并或重命名`,
       );
     }
   }
   for (const [base, arr] of audios) {
     if (arr.length > 1) {
-      throw new Error(
+      throw new UserError(
         `ambiguous basename: ${base}\n  matched ${arr.length} audios: ${arr.join(', ')}\n  v0.1 only supports 1:1 pairing — 请合并或重命名`,
       );
     }
@@ -90,7 +91,7 @@ export function discover(rootDir: string): DiscoverResult {
   orphans.sort((a, b) => a.basename.localeCompare(b.basename));
 
   if (pairs.length === 0) {
-    throw new Error(`no image/audio pairs found in ${rootDir}`);
+    throw new UserError(`no image/audio pairs found in ${rootDir}`);
   }
 
   return { pairs, orphans };

@@ -8,6 +8,7 @@ import { checkBinary, probeAudioDurationMs, probeImageSize } from '../ffmpeg/pro
 import { segmentArgv, concatArgv, concatListContent, type EncodeOptions } from '../ffmpeg/encode.js';
 import { BuildDir, makeRunId } from '../store/paths.js';
 import type { Logger } from '../log.js';
+import { UserError } from '../errors.js';
 
 export type BuildOptions = {
   inputDir: string;
@@ -69,7 +70,7 @@ export async function build(opts: BuildOptions): Promise<{ output: string }> {
   for (let i = 1; i < sizes.length; i++) {
     const s = sizes[i]!;
     if (s.width !== ref.width || s.height !== ref.height) {
-      throw new Error(
+      throw new UserError(
         `image dimensions mismatch:\n  expected ${ref.width}x${ref.height} (from ${path.basename(pairs[0]!.image)})\n  got      ${s.width}x${s.height}  in    ${path.basename(pairs[i]!.image)}`,
       );
     }

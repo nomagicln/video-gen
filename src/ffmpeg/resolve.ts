@@ -12,7 +12,6 @@ const exeName = (name: string) => (process.platform === 'win32' ? `${name}.exe` 
 
 export type ResolveOptions = {
   execDir?: string;
-  pathHas?: (binName: string) => boolean;
 };
 
 export function resolveBinary(tool: Tool, opts: ResolveOptions = {}): string {

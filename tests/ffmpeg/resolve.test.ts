@@ -25,7 +25,7 @@ describe('resolveBinary', () => {
 
   it('ignores empty env override', () => {
     process.env.VIDEO_GEN_FFMPEG = '   ';
-    expect(resolveBinary('ffmpeg', { execDir: '/no/where', pathHas: () => false }))
+    expect(resolveBinary('ffmpeg', { execDir: '/no/where' }))
       .toBe(process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg');
   });
 
@@ -36,7 +36,7 @@ describe('resolveBinary', () => {
     const sibling = path.join(tmp, exe);
     fs.writeFileSync(sibling, '');
     try {
-      expect(resolveBinary('ffmpeg', { execDir: tmp, pathHas: () => false })).toBe(sibling);
+      expect(resolveBinary('ffmpeg', { execDir: tmp })).toBe(sibling);
     } finally {
       fs.rmSync(tmp, { recursive: true });
     }
@@ -46,7 +46,7 @@ describe('resolveBinary', () => {
     delete process.env.VIDEO_GEN_FFMPEG;
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'vg-'));
     try {
-      expect(resolveBinary('ffmpeg', { execDir: tmp, pathHas: () => true }))
+      expect(resolveBinary('ffmpeg', { execDir: tmp }))
         .toBe(process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg');
     } finally {
       fs.rmSync(tmp, { recursive: true });

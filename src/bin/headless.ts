@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import path from 'node:path';
 import { build } from '../pipeline/build.js';
 import { createLogger, type LogMode } from '../log.js';
+import { UserError } from '../errors.js';
 
 type BuildOpts = {
   inputDir: string;
@@ -20,14 +21,14 @@ type BuildOpts = {
 
 function parseSeconds(label: string, value: string): number {
   const n = Number(value);
-  if (!Number.isFinite(n) || n < 0) throw new Error(`--${label}: expected a non-negative number, got "${value}"`);
+  if (!Number.isFinite(n) || n < 0) throw new UserError(`--${label}: expected a non-negative number, got "${value}"`);
   return Math.round(n * 1000);
 }
 
 function parseInteger(label: string, value: string, min: number, max: number): number {
   const n = Number(value);
   if (!Number.isInteger(n) || n < min || n > max) {
-    throw new Error(`--${label}: expected integer in [${min},${max}], got "${value}"`);
+    throw new UserError(`--${label}: expected integer in [${min},${max}], got "${value}"`);
   }
   return n;
 }
@@ -78,10 +79,8 @@ export function buildHeadlessProgram(): Command {
           logger,
         });
       } catch (err) {
+        const code = err instanceof UserError ? err.code : 1;
         const msg = err instanceof Error ? err.message : String(err);
-        const code = msg.match(/^(input dir does not exist|ambiguous basename|no image\/audio pairs|image dimensions mismatch|--\S+:|ffmpeg not found|ffprobe not found)/)
-          ? 2
-          : 1;
         logger.error(msg, code);
         process.exit(code);
       }
