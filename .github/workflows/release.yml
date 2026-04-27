@@ -1,0 +1,172 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'tag name to publish under (e.g. v0.1.0). leave empty for dry-run (artifacts only).'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: darwin-arm64
+            os: macos-14
+            archive: tar.gz
+            ext: ''
+          - target: linux-x64
+            os: ubuntu-22.04
+            archive: tar.gz
+            ext: ''
+          - target: linux-arm64
+            os: ubuntu-24.04-arm
+            archive: tar.gz
+            ext: ''
+          - target: windows-x64
+            os: windows-latest
+            archive: zip
+            ext: '.exe'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: install deps
+        run: bun install --frozen-lockfile
+
+      - name: bundle ffmpeg + ffprobe
+        shell: bash
+        run: |
+          bun add ffmpeg-static@^5.2.0 ffprobe-static@^3.1.0
+          mkdir -p dist
+          bun -e "
+          const fs = require('fs');
+          const ffmpegPath = require('ffmpeg-static');
+          const ffprobePkg = require('ffprobe-static');
+          const ffprobePath = ffprobePkg.path;
+          if (!ffmpegPath) throw new Error('ffmpeg-static did not resolve a binary for this platform');
+          if (!ffprobePath) throw new Error('ffprobe-static did not resolve a binary for this platform');
+          const ext = '${{ matrix.ext }}';
+          fs.copyFileSync(ffmpegPath, 'dist/ffmpeg' + ext);
+          fs.copyFileSync(ffprobePath, 'dist/ffprobe' + ext);
+          if (process.platform !== 'win32') {
+            fs.chmodSync('dist/ffmpeg' + ext, 0o755);
+            fs.chmodSync('dist/ffprobe' + ext, 0o755);
+          }
+          console.log('bundled', ffmpegPath, '->', 'dist/ffmpeg' + ext);
+          console.log('bundled', ffprobePath, '->', 'dist/ffprobe' + ext);
+          "
+
+      - name: typecheck
+        run: bun run typecheck
+
+      - name: test (with bundled ffmpeg/ffprobe)
+        if: matrix.target != 'windows-x64'
+        shell: bash
+        env:
+          VIDEO_GEN_FFMPEG: ${{ github.workspace }}/dist/ffmpeg
+          VIDEO_GEN_FFPROBE: ${{ github.workspace }}/dist/ffprobe
+        run: bun run test
+
+      - name: test (with bundled ffmpeg/ffprobe, windows)
+        if: matrix.target == 'windows-x64'
+        shell: pwsh
+        run: |
+          $env:VIDEO_GEN_FFMPEG = "$env:GITHUB_WORKSPACE\dist\ffmpeg.exe"
+          $env:VIDEO_GEN_FFPROBE = "$env:GITHUB_WORKSPACE\dist\ffprobe.exe"
+          bun run test
+
+      - name: compile binary
+        shell: bash
+        run: |
+          bun build src/index.ts --compile --minify --outfile dist/video-gen${{ matrix.ext }}
+
+      - name: smoke test
+        if: matrix.target != 'windows-x64'
+        shell: bash
+        run: |
+          ./dist/video-gen --help | head -20
+          ./dist/ffmpeg -version | head -1
+          ./dist/ffprobe -version | head -1
+
+      - name: smoke test (windows)
+        if: matrix.target == 'windows-x64'
+        shell: pwsh
+        run: |
+          .\dist\video-gen.exe --help | Select-Object -First 20
+          .\dist\ffmpeg.exe -version | Select-Object -First 1
+          .\dist\ffprobe.exe -version | Select-Object -First 1
+
+      - name: stage release tree
+        shell: bash
+        run: |
+          name="video-gen-${{ matrix.target }}"
+          mkdir -p "release/${name}"
+          cp "dist/video-gen${{ matrix.ext }}" "release/${name}/"
+          cp "dist/ffmpeg${{ matrix.ext }}" "release/${name}/"
+          cp "dist/ffprobe${{ matrix.ext }}" "release/${name}/"
+          cp README.md "release/${name}/"
+          cp LICENSE "release/${name}/"
+          ls -la "release/${name}"
+
+      - name: archive (tar.gz)
+        if: matrix.archive == 'tar.gz'
+        shell: bash
+        run: |
+          name="video-gen-${{ matrix.target }}"
+          tar -C release -czf "release/${name}.tar.gz" "${name}"
+          (cd release && shasum -a 256 "${name}.tar.gz" > "${name}.tar.gz.sha256")
+
+      - name: archive (zip)
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: |
+          $name = "video-gen-${{ matrix.target }}"
+          Compress-Archive -Path "release/$name/*" -DestinationPath "release/$name.zip"
+          $hash = (Get-FileHash -Algorithm SHA256 "release/$name.zip").Hash.ToLower()
+          "$hash  $name.zip" | Out-File -Encoding ascii "release/$name.zip.sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: video-gen-${{ matrix.target }}
+          path: |
+            release/video-gen-${{ matrix.target }}.${{ matrix.archive }}
+            release/video-gen-${{ matrix.target }}.${{ matrix.archive }}.sha256
+          if-no-files-found: error
+
+  release:
+    name: publish release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: assets
+          merge-multiple: true
+
+      - name: list assets
+        run: ls -la assets
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          files: assets/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false
