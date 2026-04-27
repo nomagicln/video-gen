@@ -33,7 +33,7 @@ ffmpeg + ffprobe must be on `$PATH`, beside the binary, or pointed at by `VIDEO_
 
 ## Releases
 
-Pre-built archives for darwin-arm64, linux-x64, linux-arm64, windows-x64 are published on the [Releases page](https://github.com/nomagicln/video-gen/releases). Each archive bundles `video-gen` + `ffmpeg` + `ffprobe` — extract and run, no separate ffmpeg install required.
+Pre-built archives for darwin-arm64, linux-x64, windows-x64 are published on the [Releases page](https://github.com/nomagicln/video-gen/releases). Each archive bundles `video-gen` + `ffmpeg` + `ffprobe` — extract and run, no separate ffmpeg install required.
 
 ```bash
 tar -xzf video-gen-darwin-arm64.tar.gz
