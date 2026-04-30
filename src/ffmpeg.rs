@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use serde::{Deserialize, Serialize};
 
@@ -14,6 +15,12 @@ pub enum Tool {
 pub struct ImageSize {
     pub width: u64,
     pub height: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CommandResult {
+    pub code: i32,
+    pub stderr: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -193,4 +200,97 @@ pub fn resolve_binary(
     }
 
     Ok(PathBuf::from(exe))
+}
+
+fn tail_bytes(bytes: &[u8], limit: usize) -> String {
+    let start = bytes.len().saturating_sub(limit);
+    String::from_utf8_lossy(&bytes[start..]).into_owned()
+}
+
+pub fn check_binary(tool: Tool, path: &Path) -> Result<(), VideoGenError> {
+    let output = Command::new(path)
+        .arg("-version")
+        .output()
+        .map_err(|_| {
+            VideoGenError::user(format!(
+                "{} not found at \"{}\". Install ffmpeg or set {}.",
+                match tool {
+                    Tool::Ffmpeg => "ffmpeg",
+                    Tool::Ffprobe => "ffprobe",
+                },
+                path.display(),
+                env_key(tool)
+            ))
+        })?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(VideoGenError::user(format!(
+            "{} -version failed (exit {}): {}",
+            match tool {
+                Tool::Ffmpeg => "ffmpeg",
+                Tool::Ffprobe => "ffprobe",
+            },
+            output.status.code().unwrap_or(-1),
+            tail_bytes(&output.stderr, 200)
+        )))
+    }
+}
+
+fn run_ffprobe(path: &Path, args: &[String]) -> Result<String, VideoGenError> {
+    let output = Command::new(path).args(args).output()?;
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+    } else {
+        Err(VideoGenError::runtime(format!(
+            "ffprobe exit {}: {}",
+            output.status.code().unwrap_or(-1),
+            tail_bytes(&output.stderr, 500)
+        )))
+    }
+}
+
+pub fn probe_audio_duration_ms(ffprobe: &Path, file: &Path) -> Result<u64, VideoGenError> {
+    let json = run_ffprobe(
+        ffprobe,
+        &[
+            "-v".to_string(),
+            "error".to_string(),
+            "-of".to_string(),
+            "json".to_string(),
+            "-select_streams".to_string(),
+            "a:0".to_string(),
+            "-show_entries".to_string(),
+            "stream=duration".to_string(),
+            path_arg(file),
+        ],
+    )?;
+    parse_audio_duration_ms(&json)
+}
+
+pub fn probe_image_size(ffprobe: &Path, file: &Path) -> Result<ImageSize, VideoGenError> {
+    let json = run_ffprobe(
+        ffprobe,
+        &[
+            "-v".to_string(),
+            "error".to_string(),
+            "-of".to_string(),
+            "json".to_string(),
+            "-select_streams".to_string(),
+            "v:0".to_string(),
+            "-show_entries".to_string(),
+            "stream=width,height".to_string(),
+            path_arg(file),
+        ],
+    )?;
+    parse_image_size(&json)
+}
+
+pub fn run_ffmpeg(ffmpeg: &Path, argv: &[String]) -> Result<CommandResult, VideoGenError> {
+    let output = Command::new(ffmpeg).args(argv).output()?;
+    Ok(CommandResult {
+        code: output.status.code().unwrap_or(-1),
+        stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+    })
 }
