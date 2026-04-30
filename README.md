@@ -25,11 +25,23 @@ Outputs h264/aac mp4; defaults `--fps 30 --crf 20 --preset medium --audio-bitrat
 ## Setup
 
 ```bash
-bun install
-bun run package   # → dist/video-gen
+cargo build --release
+./target/release/video-gen build -d input -o output/myvid.mp4
 ```
 
 ffmpeg + ffprobe must be on `$PATH`, beside the binary, or pointed at by `VIDEO_GEN_FFMPEG` / `VIDEO_GEN_FFPROBE`. Release tarballs bundle both.
+
+## Rust library
+
+Tauri backends can depend on this crate and call the library directly instead of shelling out to the CLI:
+
+```rust
+video_gen::build_video(options, |event| {
+    let _ = app.emit("video-gen-event", event);
+})?;
+```
+
+Pass `BinaryOptions` when the app bundles ffmpeg/ffprobe as sidecars.
 
 ## Releases
 

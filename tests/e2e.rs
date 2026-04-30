@@ -7,8 +7,32 @@ use video_gen::{
     build_video, BinaryOptions, BuildOptions, EncodeOptions, PlanOptions, VideoGenError,
 };
 
+fn tool_path(name: &str) -> String {
+    let env_key = match name {
+        "ffmpeg" => "VIDEO_GEN_FFMPEG",
+        "ffprobe" => "VIDEO_GEN_FFPROBE",
+        _ => "",
+    };
+    if !env_key.is_empty() {
+        if let Ok(value) = std::env::var(env_key) {
+            if !value.trim().is_empty() {
+                return value;
+            }
+        }
+    }
+    name.to_string()
+}
+
 fn has_tool(name: &str) -> bool {
+    let tool = tool_path(name);
     Command::new(name)
+        .arg("-version")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false)
+        || Command::new(tool)
         .arg("-version")
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
@@ -29,7 +53,7 @@ fn run(bin: &str, args: &[String]) {
 fn make_image(path: &Path, width: u32, height: u32, color: &str) {
     fs::create_dir_all(path.parent().unwrap()).unwrap();
     run(
-        "ffmpeg",
+        &tool_path("ffmpeg"),
         &[
             "-y".to_string(),
             "-f".to_string(),
@@ -46,7 +70,7 @@ fn make_image(path: &Path, width: u32, height: u32, color: &str) {
 fn make_silent_wav(path: &Path, duration_sec: f64) {
     fs::create_dir_all(path.parent().unwrap()).unwrap();
     run(
-        "ffmpeg",
+        &tool_path("ffmpeg"),
         &[
             "-y".to_string(),
             "-f".to_string(),
@@ -61,7 +85,7 @@ fn make_silent_wav(path: &Path, duration_sec: f64) {
 }
 
 fn probe_duration_sec(path: &Path) -> f64 {
-    let output = Command::new("ffprobe")
+    let output = Command::new(tool_path("ffprobe"))
         .args([
             "-v",
             "error",
