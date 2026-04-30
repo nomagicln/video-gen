@@ -54,9 +54,9 @@ pub fn parse_audio_duration_ms(json_text: &str) -> Result<u64, VideoGenError> {
         .duration
         .as_ref()
         .ok_or_else(|| VideoGenError::runtime("ffprobe: missing audio duration"))?;
-    let seconds = duration
-        .parse::<f64>()
-        .map_err(|_| VideoGenError::runtime(format!("ffprobe: invalid audio duration \"{duration}\"")))?;
+    let seconds = duration.parse::<f64>().map_err(|_| {
+        VideoGenError::runtime(format!("ffprobe: invalid audio duration \"{duration}\""))
+    })?;
     if !seconds.is_finite() {
         return Err(VideoGenError::runtime(format!(
             "ffprobe: invalid audio duration \"{duration}\""
@@ -208,20 +208,17 @@ fn tail_bytes(bytes: &[u8], limit: usize) -> String {
 }
 
 pub fn check_binary(tool: Tool, path: &Path) -> Result<(), VideoGenError> {
-    let output = Command::new(path)
-        .arg("-version")
-        .output()
-        .map_err(|_| {
-            VideoGenError::user(format!(
-                "{} not found at \"{}\". Install ffmpeg or set {}.",
-                match tool {
-                    Tool::Ffmpeg => "ffmpeg",
-                    Tool::Ffprobe => "ffprobe",
-                },
-                path.display(),
-                env_key(tool)
-            ))
-        })?;
+    let output = Command::new(path).arg("-version").output().map_err(|_| {
+        VideoGenError::user(format!(
+            "{} not found at \"{}\". Install ffmpeg or set {}.",
+            match tool {
+                Tool::Ffmpeg => "ffmpeg",
+                Tool::Ffprobe => "ffprobe",
+            },
+            path.display(),
+            env_key(tool)
+        ))
+    })?;
 
     if output.status.success() {
         Ok(())

@@ -173,9 +173,7 @@ fn format_text_stdout(event: &BuildEvent) -> Option<String> {
             format_bytes(*bytes),
             fmt_sec(*duration_ms)
         )),
-        BuildEvent::Done { elapsed_ms, .. } => {
-            Some(format!("done in {}\n", fmt_sec(*elapsed_ms)))
-        }
+        BuildEvent::Done { elapsed_ms, .. } => Some(format!("done in {}\n", fmt_sec(*elapsed_ms))),
     }
 }
 
@@ -203,10 +201,10 @@ fn format_json_stdout(event: &BuildEvent) -> Option<String> {
         }
         BuildEvent::Warn { .. } => None,
         BuildEvent::Plan {
-            segments,
-            total_ms,
-            ..
-        } => Some(json!({"phase":"plan","segments":segments,"total_ms":total_ms}).to_string() + "\n"),
+            segments, total_ms, ..
+        } => {
+            Some(json!({"phase":"plan","segments":segments,"total_ms":total_ms}).to_string() + "\n")
+        }
         BuildEvent::Segment {
             name,
             kind,

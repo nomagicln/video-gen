@@ -33,12 +33,12 @@ fn has_tool(name: &str) -> bool {
         .map(|status| status.success())
         .unwrap_or(false)
         || Command::new(tool)
-        .arg("-version")
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status()
-        .map(|status| status.success())
-        .unwrap_or(false)
+            .arg("-version")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .map(|status| status.success())
+            .unwrap_or(false)
 }
 
 fn run(bin: &str, args: &[String]) {
@@ -164,7 +164,9 @@ fn produces_single_mp4_with_expected_duration_and_cleans_temp_dir() {
     let build_root = work.path().join(".video-gen");
     assert!(build_root.exists());
     assert_eq!(fs::read_dir(build_root).unwrap().count(), 0);
-    assert!(events.iter().any(|event| matches!(event, video_gen::BuildEvent::Done { .. })));
+    assert!(events
+        .iter()
+        .any(|event| matches!(event, video_gen::BuildEvent::Done { .. })));
 }
 
 #[test]

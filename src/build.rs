@@ -94,7 +94,9 @@ pub fn resolve_output_path(raw_output: Option<&Path>, input_dir: &Path) -> PathB
 
     let is_dir = match fs::metadata(&resolved) {
         Ok(metadata) => metadata.is_dir(),
-        Err(_) => raw_output.is_some() && (has_trailing_separator(raw) || resolved.extension().is_none()),
+        Err(_) => {
+            raw_output.is_some() && (has_trailing_separator(raw) || resolved.extension().is_none())
+        }
     };
 
     if is_dir {
@@ -369,7 +371,10 @@ where
         if let Some(parent) = options.output_path.parent() {
             fs::create_dir_all(parent)?;
         }
-        let concat = run_ffmpeg(&ffmpeg, &concat_argv(&concat_list_path, &options.output_path))?;
+        let concat = run_ffmpeg(
+            &ffmpeg,
+            &concat_argv(&concat_list_path, &options.output_path),
+        )?;
         if concat.code != 0 {
             return Err(VideoGenError::runtime(format!(
                 "concat failed (ffmpeg exit {}):\n{}",

@@ -50,7 +50,10 @@ fn appends_output_mp4_when_path_ends_with_separator() {
 
     let output = resolve_output_path(Some(&ghost), input_dir());
 
-    assert_eq!(output, dir.path().join("not-yet-created").join("output.mp4"));
+    assert_eq!(
+        output,
+        dir.path().join("not-yet-created").join("output.mp4")
+    );
 }
 
 #[test]

@@ -31,14 +31,23 @@ pub enum SegmentKind {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "kebab-case")]
 pub enum Segment {
-    LeadIn { image: PathBuf, duration_ms: u64 },
+    LeadIn {
+        image: PathBuf,
+        duration_ms: u64,
+    },
     Unit {
         image: PathBuf,
         audio: PathBuf,
         duration_ms: u64,
     },
-    Gap { image: PathBuf, duration_ms: u64 },
-    Tail { image: PathBuf, duration_ms: u64 },
+    Gap {
+        image: PathBuf,
+        duration_ms: u64,
+    },
+    Tail {
+        image: PathBuf,
+        duration_ms: u64,
+    },
 }
 
 impl Segment {
