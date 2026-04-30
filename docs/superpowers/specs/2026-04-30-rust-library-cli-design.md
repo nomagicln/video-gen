@@ -269,7 +269,7 @@ cargo build --release
 - `cargo test`
 - `cargo build --release`
 - 从 `target/release/video-gen[.exe]` 复制二进制
-- ffmpeg/ffprobe 仍沿用当前 npm 包方案，使用 Node 脚本解析 `ffmpeg-static` / `ffprobe-static` 并复制到 release tree
+- release archive 不再打包 ffmpeg/ffprobe；用户通过 PATH、环境变量或可执行文件旁边的 sidecar 提供二进制
 - archive 命名和内容保持不变
 
 README 更新为 Cargo 安装和构建命令：

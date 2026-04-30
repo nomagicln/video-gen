@@ -6,7 +6,7 @@
 
 **Architecture:** One Cargo package named `video-gen` builds both `src/lib.rs` and `src/main.rs`. The library owns discovery, planning, ffmpeg/ffprobe integration, logging events, errors, and build orchestration; the CLI is a thin `clap` wrapper around the library.
 
-**Tech Stack:** Rust 2021, `clap`, `serde`, `serde_json`, `thiserror`, `which`, `tempfile`, system or bundled `ffmpeg`/`ffprobe`.
+**Tech Stack:** Rust 2021, `clap`, `serde`, `serde_json`, `thiserror`, `which`, `tempfile`, system or sidecar `ffmpeg`/`ffprobe`.
 
 ---
 
@@ -320,7 +320,7 @@ Replace setup commands with Cargo commands and keep CLI usage/release instructio
 
 - [ ] **Step 3: Update release workflow**
 
-Replace Bun test/build steps with Cargo test/build steps. Keep ffmpeg/ffprobe bundling and archive names unchanged.
+Replace Bun test/build steps with Cargo test/build steps. Keep archive names unchanged, but do not include ffmpeg/ffprobe in release archives.
 
 - [ ] **Step 4: Run full verification**
 

@@ -40,38 +40,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: bundle ffmpeg + ffprobe
-        shell: bash
-        run: |
-          npm install --no-save ffmpeg-static@^5.2.0 ffprobe-static@^3.1.0
-          mkdir -p dist
-          node - <<'NODE'
-          const fs = require('fs');
-          const ffmpegPath = require('ffmpeg-static');
-          const ffprobePkg = require('ffprobe-static');
-          const ffprobePath = ffprobePkg.path;
-          if (!ffmpegPath) throw new Error('ffmpeg-static did not resolve a binary for this platform');
-          if (!ffprobePath) throw new Error('ffprobe-static did not resolve a binary for this platform');
-          const ext = '${{ matrix.ext }}';
-          fs.copyFileSync(ffmpegPath, 'dist/ffmpeg' + ext);
-          fs.copyFileSync(ffprobePath, 'dist/ffprobe' + ext);
-          if (process.platform !== 'win32') {
-            fs.chmodSync('dist/ffmpeg' + ext, 0o755);
-            fs.chmodSync('dist/ffprobe' + ext, 0o755);
-          }
-          console.log('bundled', ffmpegPath, '->', 'dist/ffmpeg' + ext);
-          console.log('bundled', ffprobePath, '->', 'dist/ffprobe' + ext);
-          NODE
-
-      - name: test (with bundled ffmpeg/ffprobe)
-        shell: bash
-        env:
-          VIDEO_GEN_FFMPEG: ${{ github.workspace }}/dist/ffmpeg${{ matrix.ext }}
-          VIDEO_GEN_FFPROBE: ${{ github.workspace }}/dist/ffprobe${{ matrix.ext }}
+      - name: test
         run: cargo test
 
       - name: compile binary
@@ -88,16 +57,12 @@ jobs:
         shell: bash
         run: |
           ./dist/video-gen --help | head -20
-          ./dist/ffmpeg -version | head -1
-          ./dist/ffprobe -version | head -1
 
       - name: smoke test (windows)
         if: matrix.target == 'windows-x64'
         shell: pwsh
         run: |
           .\dist\video-gen.exe --help | Select-Object -First 20
-          .\dist\ffmpeg.exe -version | Select-Object -First 1
-          .\dist\ffprobe.exe -version | Select-Object -First 1
 
       - name: stage release tree
         shell: bash
@@ -105,8 +70,6 @@ jobs:
           name="video-gen-${{ matrix.target }}"
           mkdir -p "release/${name}"
           cp "dist/video-gen${{ matrix.ext }}" "release/${name}/"
-          cp "dist/ffmpeg${{ matrix.ext }}" "release/${name}/"
-          cp "dist/ffprobe${{ matrix.ext }}" "release/${name}/"
           cp README.md "release/${name}/"
           cp LICENSE "release/${name}/"
           ls -la "release/${name}"
