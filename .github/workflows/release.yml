@@ -49,6 +49,7 @@ jobs:
       - name: stage binary
         shell: bash
         run: |
+          mkdir -p dist
           cp "target/release/video-gen${{ matrix.ext }}" "dist/video-gen${{ matrix.ext }}"
           if [ "${{ matrix.ext }}" = "" ]; then chmod +x dist/video-gen; fi
 
